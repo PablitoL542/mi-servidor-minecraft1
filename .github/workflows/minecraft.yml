@@ -32,7 +32,10 @@ jobs:
     - name: Descargar e Iniciar Playit.gg
       run: |
         cd server
+        # Crear directorios que exige playitd para evitar el error de IPC socket
         mkdir -p ~/.config/playit_gg
+        sudo mkdir -p /run/user/1000
+        sudo chmod 777 /run/user/1000
         
         echo "Descargando Playit.gg..."
         curl -sL https://github.com/playit-cloud/playit-agent/releases/latest/download/playit-linux-amd64 -o playit
