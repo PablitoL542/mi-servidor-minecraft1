@@ -29,7 +29,7 @@ jobs:
         curl -s -L -o installer.jar https://maven.minecraftforge.net/net/minecraftforge/forge/${FORGE_VERSION}/forge-${FORGE_VERSION}-installer.jar
         java -jar installer.jar --installServer > /dev/null 2>&1
 
-    - name: Iniciar Servidor y Pinggy con Reconexión
+    - name: Iniciar Servidor y Pinggy
       run: |
         cd server
         
@@ -44,9 +44,12 @@ jobs:
         done
         echo "¡Puerto de Minecraft detectado!"
         
-        # 3. Lanzar Pinggy cuando el puerto YA está abierto
+        # 3. Lanzar Pinggy cuando el puerto ya está abierto
         ssh -p 443 -o StrictHostKeyChecking=no -o ServerAliveInterval=15 free@a.pinggy.io R:0:localhost:25565 > pinggy.log 2>&1 &
-        sleep 5
+        
+        # 4. Darle 12 segundos para que reciba la URL completa
+        echo "Obteniendo IP pública..."
+        sleep 12
         
         echo "===================================================="
         echo "TU IP PARA ENTRAR A MINECRAFT ES:"
