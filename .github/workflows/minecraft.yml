@@ -29,29 +29,24 @@ jobs:
         curl -s -L -o installer.jar https://maven.minecraftforge.net/net/minecraftforge/forge/${FORGE_VERSION}/forge-${FORGE_VERSION}-installer.jar
         java -jar installer.jar --installServer > /dev/null 2>&1
 
-    - name: Iniciar Túnel Pinggy en Bucle
+    - name: Descargar e Iniciar Playit.gg
       run: |
         cd server
-        nohup bash -c 'while true; do ssh -p 443 -o StrictHostKeyChecking=no -o ServerAliveInterval=10 free@a.pinggy.io R:0:localhost:25565 >> pinggy.log 2>&1; sleep 5; done' > /dev/null 2>&1 &
-        echo "Túnel iniciado..."
+        echo "Descargando Playit.gg..."
+        curl -sL https://github.com/playit-cloud/playit-agent/releases/latest/download/playit-linux-amd64 -o playit
+        chmod +x playit
+        
+        echo "Iniciando túnel Playit..."
+        ./playit > playit.log 2>&1 &
+        sleep 10
+        
+        echo "===================================================="
+        echo "ENLACE PARA RECLAMAR TU IP/TÚNEL DE PLAYIT:"
+        grep -oE 'https://playit.gg/claim/[a-zA-Z0-9]+' playit.log || cat playit.log
+        echo "===================================================="
 
-    - name: Iniciar Minecraft y Mostrar IP
+    - name: Iniciar Servidor Minecraft
       run: |
         cd server
-        echo "Esperando a que Pinggy genere la IP..."
-        sleep 15
-        
-        # Extraer IP limpia
-        PINGGY_IP=$(grep -oE '[a-zA-Z0-9.-]+\.a\.pinggy\.link:[0-9]+' pinggy.log | head -n 1)
-        
-        # Publicar IP en el panel principal de GitHub (Summary)
-        echo "## 🎮 IP DEL SERVIDOR DE MINECRAFT" >> $GITHUB_STEP_SUMMARY
-        echo "### \`$PINGGY_IP\`" >> $GITHUB_STEP_SUMMARY
-        echo "Copia esta IP y pégala en tu Minecraft en **Multijugador > Conexión Directa**." >> $GITHUB_STEP_SUMMARY
-        
-        echo "===================================================="
-        echo "TU IP ES: $PINGGY_IP"
-        echo "===================================================="
-        
-        # Arrancar servidor de Forge
+        # Arrancar servidor de Forge en primer plano
         java -Xms2G -Xmx6G @libraries/net/minecraftforge/forge/1.20.1-47.2.0/unix_args.txt nogui
