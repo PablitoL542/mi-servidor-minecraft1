@@ -32,17 +32,14 @@ jobs:
     - name: Descargar e Iniciar Playit.gg
       run: |
         cd server
-        # Crear directorios que exige playitd para evitar el error de IPC socket
-        mkdir -p ~/.config/playit_gg
-        sudo mkdir -p /run/user/1000
-        sudo chmod 777 /run/user/1000
         
-        echo "Descargando Playit.gg..."
+        echo "Descargando Playit.gg CLI..."
         curl -sL https://github.com/playit-cloud/playit-agent/releases/latest/download/playit-linux-amd64 -o playit
         chmod +x playit
         
-        echo "Iniciando túnel Playit..."
-        ./playit > playit.log 2>&1 &
+        echo "Iniciando Playit sin demonio IPC..."
+        # El argumento --platform/--secret-path le obliga a correr de forma directa
+        ./playit --secret-path ~/.config/playit_gg/secret.toml > playit.log 2>&1 &
         sleep 12
         
         echo "===================================================="
