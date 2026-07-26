@@ -29,21 +29,28 @@ jobs:
         curl -s -L -o installer.jar https://maven.minecraftforge.net/net/minecraftforge/forge/${FORGE_VERSION}/forge-${FORGE_VERSION}-installer.jar
         java -jar installer.jar --installServer > /dev/null 2>&1
 
-    - name: Iniciar túnel Pinggy y Servidor
+    - name: Iniciar Servidor y Túnel Pinggy
       run: |
         cd server
         
-        # Iniciar Pinggy
-        ssh -p 443 -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o ServerAliveInterval=30 -n free@a.pinggy.io R:0:localhost:25565 > pinggy.log 2>&1 &
+        # 1. Arrancar el servidor de Forge en segundo plano primero
+        echo "Iniciando Minecraft..."
+        java -Xms2G -Xmx6G @libraries/net/minecraftforge/forge/1.20.1-47.2.0/unix_args.txt nogui &
         
-        # Darle 20 segundos a Pinggy para generar la IP
-        echo "Esperando IP de Pinggy..."
-        sleep 20
+        # 2. Esperar 35 segundos a que Forge abra el puerto 25565
+        echo "Esperando a que Forge prepare el puerto local..."
+        sleep 35
+        
+        # 3. Conectar Pinggy con reconexión automática (ServerAliveInterval)
+        ssh -p 443 -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o ServerAliveInterval=15 -n free@a.pinggy.io R:0:localhost:25565 > pinggy.log 2>&1 &
+        
+        # 4. Darle 10 segundos a Pinggy para recibir la IP
+        sleep 10
         
         echo "===================================================="
         echo "TU IP PARA ENTRAR A MINECRAFT ES:"
         grep -oE '[a-zA-Z0-9.-]+\.a\.pinggy\.link:[0-9]+' pinggy.log || cat pinggy.log
         echo "===================================================="
 
-        # Arrancar el servidor de Forge
-        java -Xms2G -Xmx6G @libraries/net/minecraftforge/forge/1.20.1-47.2.0/unix_args.txt nogui
+        # 5. Mantener el proceso vivo para que no se apague
+        wait
