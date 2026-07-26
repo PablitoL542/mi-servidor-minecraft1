@@ -33,11 +33,11 @@ jobs:
       run: |
         cd server
         
-        # Iniciar Pinggy con parámetros anti-bloqueo y sin esperar interacción
+        # Iniciar Pinggy
         ssh -p 443 -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o ServerAliveInterval=30 -n free@a.pinggy.io R:0:localhost:25565 > pinggy.log 2>&1 &
         
-        # Darle tiempo suficiente a Forge para levantar el proceso
-        echo "Esperando a que el túnel genere la IP..."
+        # Darle 20 segundos a Pinggy para generar la IP
+        echo "Esperando IP de Pinggy..."
         sleep 20
         
         echo "===================================================="
