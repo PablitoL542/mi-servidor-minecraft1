@@ -32,7 +32,6 @@ jobs:
     - name: Descargar e Iniciar Playit.gg
       run: |
         cd server
-        # Crear la carpeta de configuración que Playit necesita
         mkdir -p ~/.config/playit_gg
         
         echo "Descargando Playit.gg..."
@@ -40,12 +39,12 @@ jobs:
         chmod +x playit
         
         echo "Iniciando túnel Playit..."
-        ./playit claim > playit.log 2>&1 &
-        sleep 10
+        ./playit > playit.log 2>&1 &
+        sleep 12
         
         echo "===================================================="
         echo "ENLACE PARA RECLAMAR TU IP/TÚNEL DE PLAYIT:"
-        grep -oE 'https://playit.gg/claim/[a-zA-Z0-9]+' playit.log || cat playit.log
+        grep -oE 'https://playit\.gg/claim/[a-zA-Z0-9_-]+' playit.log || cat playit.log
         echo "===================================================="
     - name: Iniciar Servidor Minecraft
       run: |
