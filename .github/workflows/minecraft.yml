@@ -23,32 +23,27 @@ jobs:
         cd server
         echo "eula=true" > eula.txt
         
-        # Descargar instalador de Forge para la versión 1.20.1
+        # Descargar e instalar Forge 1.20.1
         FORGE_VERSION="1.20.1-47.2.0"
-        curl -o installer.jar https://maven.minecraftforge.net/net/minecraftforge/forge/${FORGE_VERSION}/forge-${FORGE_VERSION}-installer.jar
-        
-        # Instalar el servidor en modo headless
-        java -jar installer.jar --installServer
-        
-        # Renombrar el archivo de inicio a server.jar para facilitar el arranque
-        mv forge-${FORGE_VERSION}-universal.jar server.jar || mv run.jar server.jar || true
+        echo "Descargando e instalando Forge..."
+        curl -s -L -o installer.jar https://maven.minecraftforge.net/net/minecraftforge/forge/${FORGE_VERSION}/forge-${FORGE_VERSION}-installer.jar
+        java -jar installer.jar --installServer > /dev/null 2>&1
 
     - name: Iniciar túnel Pinggy y Servidor
       run: |
         cd server
         
-        # Iniciar el túnel TCP gratuito mediante SSH
-        ssh -p 443 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 free@a.pinggy.io R:0:localhost:25565 > pinggy.log 2>&1 &
+        # Iniciar Pinggy con parámetros anti-bloqueo y sin esperar interacción
+        ssh -p 443 -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o ServerAliveInterval=30 -n free@a.pinggy.io R:0:localhost:25565 > pinggy.log 2>&1 &
         
-        # Esperar a que levante el túnel
-        sleep 8
+        # Darle tiempo suficiente a Forge para levantar el proceso
+        echo "Esperando a que el túnel genere la IP..."
+        sleep 20
         
-        # Mostrar IP en consola
         echo "===================================================="
         echo "TU IP PARA ENTRAR A MINECRAFT ES:"
         grep -oE '[a-zA-Z0-9.-]+\.a\.pinggy\.link:[0-9]+' pinggy.log || cat pinggy.log
         echo "===================================================="
 
-        # Iniciar servidor con Forge (Java 17)
-        # Nota: Si el archivo se llama diferente, ajusta "server.jar" según el instalador
-        java -Xms2G -Xmx6G @libraries/net/minecraftforge/forge/1.20.1-47.2.0/unix_args.txt nogui || java -Xms2G -Xmx6G -jar server.jar nogui
+        # Arrancar el servidor de Forge
+        java -Xms2G -Xmx6G @libraries/net/minecraftforge/forge/1.20.1-47.2.0/unix_args.txt nogui
