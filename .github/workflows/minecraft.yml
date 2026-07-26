@@ -29,28 +29,23 @@ jobs:
         curl -s -L -o installer.jar https://maven.minecraftforge.net/net/minecraftforge/forge/${FORGE_VERSION}/forge-${FORGE_VERSION}-installer.jar
         java -jar installer.jar --installServer > /dev/null 2>&1
 
-    - name: Iniciar Servidor y Túnel Pinggy
+    - name: Iniciar Túnel Pinggy en Bucle
       run: |
         cd server
-        
-        # 1. Arrancar el servidor de Forge en segundo plano primero
-        echo "Iniciando Minecraft..."
-        java -Xms2G -Xmx6G @libraries/net/minecraftforge/forge/1.20.1-47.2.0/unix_args.txt nogui &
-        
-        # 2. Esperar 35 segundos a que Forge abra el puerto 25565
-        echo "Esperando a que Forge prepare el puerto local..."
-        sleep 35
-        
-        # 3. Conectar Pinggy con reconexión automática (ServerAliveInterval)
-        ssh -p 443 -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o ServerAliveInterval=15 -n free@a.pinggy.io R:0:localhost:25565 > pinggy.log 2>&1 &
-        
-        # 4. Darle 10 segundos a Pinggy para recibir la IP
-        sleep 10
+        # Conectar Pinggy en un bucle continuo para que mantenga la conexión viva aunque el servidor tarde
+        nohup bash -c 'while true; do ssh -p 443 -o StrictHostKeyChecking=no -o ServerAliveInterval=10 free@a.pinggy.io R:0:localhost:25565 >> pinggy.log 2>&1; sleep 5; done' > /dev/null 2>&1 &
+        echo "Túnel iniciado..."
+
+    - name: Iniciar Minecraft y Mostrar IP
+      run: |
+        cd server
+        echo "Esperando 15 segundos a que Pinggy genere la IP..."
+        sleep 15
         
         echo "===================================================="
         echo "TU IP PARA ENTRAR A MINECRAFT ES:"
         grep -oE '[a-zA-Z0-9.-]+\.a\.pinggy\.link:[0-9]+' pinggy.log || cat pinggy.log
         echo "===================================================="
-
-        # 5. Mantener el proceso vivo para que no se apague
-        wait
+        
+        # Arrancar servidor de Forge
+        java -Xms2G -Xmx6G @libraries/net/minecraftforge/forge/1.20.1-47.2.0/unix_args.txt nogui
