@@ -32,19 +32,25 @@ jobs:
     - name: Iniciar Túnel Pinggy en Bucle
       run: |
         cd server
-        # Conectar Pinggy en un bucle continuo para que mantenga la conexión viva aunque el servidor tarde
         nohup bash -c 'while true; do ssh -p 443 -o StrictHostKeyChecking=no -o ServerAliveInterval=10 free@a.pinggy.io R:0:localhost:25565 >> pinggy.log 2>&1; sleep 5; done' > /dev/null 2>&1 &
         echo "Túnel iniciado..."
 
     - name: Iniciar Minecraft y Mostrar IP
       run: |
         cd server
-        echo "Esperando 15 segundos a que Pinggy genere la IP..."
+        echo "Esperando a que Pinggy genere la IP..."
         sleep 15
         
+        # Extraer IP limpia
+        PINGGY_IP=$(grep -oE '[a-zA-Z0-9.-]+\.a\.pinggy\.link:[0-9]+' pinggy.log | head -n 1)
+        
+        # Publicar IP en el panel principal de GitHub (Summary)
+        echo "## 🎮 IP DEL SERVIDOR DE MINECRAFT" >> $GITHUB_STEP_SUMMARY
+        echo "### \`$PINGGY_IP\`" >> $GITHUB_STEP_SUMMARY
+        echo "Copia esta IP y pégala en tu Minecraft en **Multijugador > Conexión Directa**." >> $GITHUB_STEP_SUMMARY
+        
         echo "===================================================="
-        echo "TU IP PARA ENTRAR A MINECRAFT ES:"
-        grep -oE '[a-zA-Z0-9.-]+\.a\.pinggy\.link:[0-9]+' pinggy.log || cat pinggy.log
+        echo "TU IP ES: $PINGGY_IP"
         echo "===================================================="
         
         # Arrancar servidor de Forge
