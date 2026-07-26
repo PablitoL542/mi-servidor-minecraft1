@@ -1,0 +1,47 @@
+name: Servidor Minecraft (Pinggy)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  run-server:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Clonar repositorio
+      uses: actions/checkout@v4
+
+    - name: Configurar Java 21
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '21'
+
+    - name: Descargar servidor Paper (1.20.4)
+      run: |
+        mkdir -p server
+        cd server
+        echo "eula=true" > eula.txt
+        if [ ! -f paper.jar ]; then
+          curl -o paper.jar https://api.papermc.io/v2/projects/paper/versions/1.20.4/builds/496/downloads/paper-1.20.4-496.jar
+        fi
+
+    - name: Iniciar túnel Pinggy y Servidor
+      run: |
+        cd server
+        
+        # 1. Iniciar el túnel TCP gratuito mediante SSH
+        ssh -p 443 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 free@a.pinggy.io R:0:localhost:25565 > pinggy.log 2>&1 &
+        
+        # Esperar 8 segundos para asegurar la conexión
+        sleep 8
+        
+        # 2. Imprimir la IP para conectarse
+        echo "===================================================="
+        echo "TU IP PARA ENTRAR A MINECRAFT ES:"
+        grep -oE '[a-zA-Z0-9.-]+\.a\.pinggy\.link:[0-9]+' pinggy.log || cat pinggy.log
+        echo "===================================================="
+
+        # 3. Iniciar la consola de Minecraft con 6GB de RAM
+        java -Xms2G -Xmx6G -jar paper.jar nogui
+      
