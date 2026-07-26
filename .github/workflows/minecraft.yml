@@ -1,4 +1,4 @@
-name: Servidor Minecraft (Pinggy)
+name: Servidor Minecraft Mods (1.20.1)
 
 on:
   workflow_dispatch:
@@ -11,37 +11,44 @@ jobs:
     - name: Clonar repositorio
       uses: actions/checkout@v4
 
-    - name: Configurar Java 21
+    - name: Configurar Java 17
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
-        java-version: '21'
+        java-version: '17'
 
-    - name: Descargar servidor Paper (1.20.4)
+    - name: Configurar servidor Forge (1.20.1) y Mods
       run: |
-        mkdir -p server
+        mkdir -p server/mods
         cd server
         echo "eula=true" > eula.txt
-        if [ ! -f paper.jar ]; then
-          curl -o paper.jar https://api.papermc.io/v2/projects/paper/versions/1.20.4/builds/496/downloads/paper-1.20.4-496.jar
-        fi
+        
+        # Descargar instalador de Forge para la versión 1.20.1
+        FORGE_VERSION="1.20.1-47.2.0"
+        curl -o installer.jar https://maven.minecraftforge.net/net/minecraftforge/forge/${FORGE_VERSION}/forge-${FORGE_VERSION}-installer.jar
+        
+        # Instalar el servidor en modo headless
+        java -jar installer.jar --installServer
+        
+        # Renombrar el archivo de inicio a server.jar para facilitar el arranque
+        mv forge-${FORGE_VERSION}-universal.jar server.jar || mv run.jar server.jar || true
 
     - name: Iniciar túnel Pinggy y Servidor
       run: |
         cd server
         
-        # 1. Iniciar el túnel TCP gratuito mediante SSH
+        # Iniciar el túnel TCP gratuito mediante SSH
         ssh -p 443 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 free@a.pinggy.io R:0:localhost:25565 > pinggy.log 2>&1 &
         
-        # Esperar 8 segundos para asegurar la conexión
+        # Esperar a que levante el túnel
         sleep 8
         
-        # 2. Imprimir la IP para conectarse
+        # Mostrar IP en consola
         echo "===================================================="
         echo "TU IP PARA ENTRAR A MINECRAFT ES:"
         grep -oE '[a-zA-Z0-9.-]+\.a\.pinggy\.link:[0-9]+' pinggy.log || cat pinggy.log
         echo "===================================================="
 
-        # 3. Iniciar la consola de Minecraft con 6GB de RAM
-        java -Xms2G -Xmx6G -jar paper.jar nogui
-      
+        # Iniciar servidor con Forge (Java 17)
+        # Nota: Si el archivo se llama diferente, ajusta "server.jar" según el instalador
+        java -Xms2G -Xmx6G @libraries/net/minecraftforge/forge/1.20.1-47.2.0/unix_args.txt nogui || java -Xms2G -Xmx6G -jar server.jar nogui
