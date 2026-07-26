@@ -17,54 +17,42 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
-    - name: Configurar servidor Forge (1.20.1) y Mods
+    - name: Configurar servidor Forge (1.20.1)
       run: |
         mkdir -p server/mods
         cd server
         echo "eula=true" > eula.txt
         
-        # Descargar e instalar Forge 1.20.1
+        # Descargar e instalar Forge
         FORGE_VERSION="1.20.1-47.2.0"
         echo "Descargando e instalando Forge..."
         curl -s -L -o installer.jar https://maven.minecraftforge.net/net/minecraftforge/forge/${FORGE_VERSION}/forge-${FORGE_VERSION}-installer.jar
         java -jar installer.jar --installServer > /dev/null 2>&1
 
-    - name: Instalar e Iniciar Ngrok
+    - name: Instalar LocalTunnel
       run: |
-        # Instalar Ngrok oficialmente
-        curl -shttps://ngrok-agent.s3.amazonaws.com/ngrok.asc | sudo hkp--receive-keys --keyserver keyserver.ubuntu.com 2A1B1C1D || true
-        curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
-        echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | sudo tee /etc/apt/sources.list.d/ngrok.list
-        sudo apt update -y && sudo apt install ngrok -y
-        
-        # Iniciar túnel Ngrok para el puerto TCP de Minecraft
-        ngrok tcp 25565 > /dev/null 2>&1 &
-        sleep 3
+        npm install -g localtunnel
 
     - name: Iniciar Minecraft y Publicar IP
       run: |
         cd server
         
-        # Iniciar Minecraft en segundo plano
-        echo "Iniciando servidor de Minecraft..."
-        java -Xms2G -Xmx6G @libraries/net/minecraftforge/forge/1.20.1-47.2.0/unix_args.txt nogui &
+        # 1. Iniciar túnel de LocalTunnel al puerto 25565
+        lt --port 25565 > lt.log 2>&1 &
+        sleep 5
         
-        # Esperar a que el puerto 25565 abra
-        echo "Cargando mods y generando mundo..."
-        until nc -z localhost 25565; do
-          sleep 4
-        done
-        
-        # Extraer la IP pública limpia desde el API local de Ngrok
-        NGROK_IP=$(curl -s http://localhost:4040/api/tunnels | grep -oE 'tcp://[0-9a-z.-]+:[0-9]+' | sed 's/tcp:\/\///')
-        
-        # Mostrar IP en pantalla y en el resumen de GitHub
-        echo "## 🎮 IP DEL SERVIDOR DE MINECRAFT" >> $GITHUB_STEP_SUMMARY
-        echo "### \`$NGROK_IP\`" >> $GITHUB_STEP_SUMMARY
+        # 2. Extraer URL del túnel
+        PUBLIC_URL=$(grep -oE 'https://[a-zA-Z0-9-]+\.loca\.lt' lt.log || echo "No se pudo obtener la URL de LocalTunnel")
         
         echo "===================================================="
-        echo "TU IP PARA ENTRAR A MINECRAFT ES:"
-        echo "$NGROK_IP"
+        echo "TU ENLACE / IP DEL SERVIDOR ES:"
+        echo "$PUBLIC_URL"
         echo "===================================================="
         
-        wait
+        # Publicar también en el resumen visual de GitHub
+        echo "## 🎮 TU IP / ENLACE DE MINECRAFT" >> $GITHUB_STEP_SUMMARY
+        echo "### \`$PUBLIC_URL\`" >> $GITHUB_STEP_SUMMARY
+
+        # 3. Iniciar Minecraft en primer plano
+        echo "Iniciando servidor de Minecraft (esto tomará ~2 minutos)..."
+        java -Xms2G -Xmx6G @libraries/net/minecraftforge/forge/1.20.1-47.2.0/unix_args.txt nogui
